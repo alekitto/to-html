@@ -52,6 +52,7 @@
 //! Enable the `lazy-init` feature to initialize a few things lazily, which is faster if you're
 //! converting many strings.
 #![deny(unsafe_code)]
+#![feature(lazy_cell)]
 
 mod ansi;
 mod color;
@@ -65,8 +66,8 @@ use color::Color;
 pub use error::Error;
 pub use esc::Esc;
 
-#[cfg(feature = "once_cell")]
-use once_cell::sync::Lazy;
+#[cfg(feature = "lazy-init")]
+use std::sync::LazyLock;
 use regex::Regex;
 
 /// Converts a string containing ANSI escape codes to HTML.
@@ -94,7 +95,7 @@ pub fn convert(ansi_string: &str) -> Result<String, Error> {
 
 /// Customizes the behavior of [`convert_with_opts()`]
 ///
-/// By default this will:
+/// By default, this will:
 ///
 /// - Escape special HTML characters (`<>&'"`) prior to conversion.
 /// - Optimizes to minimize the number of generated HTML tags.
@@ -183,18 +184,18 @@ const ANSI_REGEX: &str = r"\u{1b}(\[[0-9;?]*[A-HJKSTfhilmnsu]|\(B)";
 const OPT_REGEX_1: &str = r"<span \w+='[^']*'></span>|<b></b>|<i></i>|<u></u>|<s></s>";
 const OPT_REGEX_2: &str = "</b><b>|</i><i>|</u><u>|</s><s>";
 
-#[cfg(not(feature = "once_cell"))]
+#[cfg(not(feature = "lazy-init"))]
 fn ansi_regex() -> Regex {
     Regex::new(ANSI_REGEX).unwrap()
 }
 
-#[cfg(feature = "once_cell")]
+#[cfg(feature = "lazy-init")]
 fn ansi_regex() -> &'static Regex {
-    static REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(ANSI_REGEX).unwrap());
+    static REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(ANSI_REGEX).unwrap());
     &*REGEX
 }
 
-#[cfg(not(feature = "once_cell"))]
+#[cfg(not(feature = "lazy-init"))]
 fn optimize(html: &str) -> String {
     let html = Regex::new(OPT_REGEX_1).unwrap().replace_all(html, "");
     let html = Regex::new(OPT_REGEX_2).unwrap().replace_all(&html, "");
@@ -202,9 +203,9 @@ fn optimize(html: &str) -> String {
     html.to_string()
 }
 
-#[cfg(feature = "once_cell")]
+#[cfg(feature = "lazy-init")]
 fn optimize(html: &str) -> String {
-    static REGEXES: Lazy<(Regex, Regex)> = Lazy::new(|| {
+    static REGEXES: LazyLock<(Regex, Regex)> = LazyLock::new(|| {
         (
             Regex::new(OPT_REGEX_1).unwrap(),
             Regex::new(OPT_REGEX_2).unwrap(),

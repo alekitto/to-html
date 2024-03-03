@@ -17,11 +17,10 @@ keywords = ["color", "cli", "terminal", "html"]
 [dependencies]
 regex = "1.7.3"
 thiserror = "1.0.40"
-once_cell = { version = "1.17.1", optional = true }
 
 [features]
 default = []
-lazy-init = ["once_cell"]
+lazy-init = []
 
 [dev-dependencies]
 insta = "1.29.0"
